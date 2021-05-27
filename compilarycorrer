@@ -1,4 +1,18 @@
+Compilamos, linkeamos, y ejecutamos:
 as -g -o modo_protegido.o modo_protegido.S
 ld --oformat binary -o modo_protegido.img -T link.ld modo_protegido.o
 qemu-system-x86_64 -hda modo_protegido.img
 
+
+Para depurar ejecutamos:
+qemu-system-i386 -fda modo_protegido.img -boot a -s -S -monitor stdio
+
+Luego en otra terminal, sin cerrar la terminal anterior ejecutamos: 
+"gdb" y luego le decimos que nos queremos conectar a la maquina virtual QEMU con "target remote localhost:1234". Con esto logramos depurar el codigo que está corriendo en una maquina virtual.
+
+
+
+Depurar con gdb: Debido a que hay una interrupcion de la bios y hay que depurarla con gdb, no se puede.. entonces hay que hacer lo siguiente:
+-colocar un breakpoint en la dirección de arranque,
+-luego colocar otro a continuación de la llamada a la interrupción
+-Utilizar “c” continue antes de las interrupciones y “si” para ejecutar una sola instrucción.

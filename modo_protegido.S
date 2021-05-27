@@ -1,8 +1,10 @@
-.code16         /*Como estamos en modo real, utilizamos segmentos de 16 bits*/
-cli             /*Deshabilitamos las interrupciones*/
-ljmp $0, $1f
+.code16         /* Como estamos en modo real, utilizamos segmentos de 16 bits, y definimos un area de codigo de 16 bits */
+cli             /* Deshabilitamos las interrupciones */
+ljmp $0, $1f    /* Seteamos %cs a 0 */
 1:
-xor %ax, %ax    /*limpiamos todos los registros de proposito gral.*/
+xor %ax, %ax    /* Limpiamos todos los registros de proposito gral. */ 
+                /*Para ejecutarlo con el emulador qemu, estas inicializaiones no son necesarias, 
+                /*pero para ejecutarlo con hardware real si lo son */
 
 mov %ax, %ds
 mov %ax, %es
@@ -12,23 +14,30 @@ mov %ax, %bp
 mov %ax, %ss
 mov %bp, %sp
 
-/*Dado que en el modo protegido ya no podemos hacer uso de las interrupciones de la bios para mostrar en pantalla, tenemos que usar la salida VGA*/
+/* Dado que en el modo protegido ya no podemos hacer uso de las interrupciones de la bios para mostrar en pantalla, tenemos que usar la salida VGA */
 
 /*--LIMPIAMOS LA PANTALLA*--/
 
-/*Guardamos los registros de proposito gral en la pila, para poder modificar su valor*/
+/* Guardamos los registros de proposito gral en la pila, para poder modificar su valor */
 push %ax
 push %bx
 push %cx
 push %dx
 
-/*Desplaza hacia arriba un número determinado de líneas en la ventana especificada mediante los registros CX y DX. Las líneas desplazadas, quedan vacías, rellenándose con blancos. El color utilizado en estas líneas vacías se indica mediante el registro BH.*/
+/* Desplaza hacia arriba un número determinado de líneas en la ventana especificada mediante los registros CX y DX. Las líneas desplazadas, quedan vacías, rellenándose con blancos. El color utilizado en estas líneas vacías se indica mediante el registro BH.*/
 mov $0x0600, %ax    /*movemos el valor 06h a ax, para luego llamar a la interrupcion 10. (la funcion 06h es para Desplazar líneas de texto hacia arriba)*/
                     /*AL = Número de líneas a desplazar. Si AL=0, se borra toda la ventana seleccionada mediante los registros CX y DX*/
-mov $0x7, %bh       /*BH = Atributo a usar en las líneas borradas.*/    
+mov $0x7, %bh       /*BH = Atributo a usar en las líneas borradas.*/ /* Es el color del cursor */   
 mov $0x0, %cx       /*CH = Línea donde comienza la ventana de texto. CL = Columna donde comienza la ventana de texto.*/
 mov $0x184f, %dx    /*DH = Línea donde acaba la ventana de texto. DL = Columna donde acaba la ventana de texto.*/
 
+int $0x10
+
+/* Seteamos la Posicion de el cursor en x=0 y=0 */
+mov $0x02, %ah      /*Esta funcion es para setear la posicion del cursor.*/ 
+mov $0x00, %bh   /*Numero de paginas*/
+mov $0, %dh     /* x */      /*Fila*/
+mov $0, %dl     /* y */     /*Columna*/
 int $0x10
 
 /*Recuperamos los registros de proposito gral de la pila*/
@@ -85,7 +94,7 @@ gdt_descriptor:
     .word gdt_end - gdt_start   /*tamaño de la tabla gdt en bytes*/
     .long gdt_start             /*direccion de memoria que indica el principio de la GDT*/
 
-vga_current_line:
+vga_current_line:               /*Representacion de la linea actual de la salida vga*/
     .long 0
 
 .code32                         /*En modo protegido ya trabajamos con 32 bits, por lo tanto declaramos una region de codigo de 32 bits*/
@@ -120,16 +129,16 @@ mov %ebp, %esp
     /* 160 == 80 * 2 == ancho de línea * bytes por carácter en pantalla */
     mov $160, %edx
     mul %edx
-    /* 0xb8000 == magic video memory address which shows on the screen. */
-    lea 0xb8000(%eax), %edx
-    /* Blanco sobre negro */
+    /* 0xb8000 == direccion de memoria de video donde escribimos para poder ver la salida en pantalla. */
+    lea 0xb8000(%eax), %edx             /*Cargamos la direccion de memoria de video en el registro edx*/
+    /* Seteamos el color de la letra */
     mov $0xa, %ah
 loop:
-    mov (%ecx), %al
+    mov (%ecx), %al                 /*Cargamos lo que apunta ecx (el mensaje a mostrar en la salida), en el registro al*/
     cmp $0, %al
-    je end
-    mov %ax, (%edx)
-    add $1, %ecx
+    je end                          /*Si se leyo el ultimo caracter saltamos a la etiqueta end en la cual se incrementa la linea actual de vga que se esta apuntando*/
+    mov %ax, (%edx)                 /*Escribimos en la direccion de memoria de video*/
+    add $1, %ecx                    
     add $2, %edx
     jmp loop
 end:
