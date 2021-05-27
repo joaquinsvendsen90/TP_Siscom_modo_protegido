@@ -16,3 +16,8 @@ Depurar con gdb: Debido a que hay una interrupcion de la bios y hay que depurarl
 -colocar un breakpoint en la dirección de arranque,
 -luego colocar otro a continuación de la llamada a la interrupción
 -Utilizar “c” continue antes de las interrupciones y “si” para ejecutar una sola instrucción.
+
+
+
+con esto arreglamos el dashboard: una vez adentro del dashboard ejecutamos el siguiente comando y luego enter y se arregla:
+dashboard registers -style list 'rax rbx rcx rdx rsi rdi rbp rsp r8 r9 r10 r11 r12 r13 r14 r15 rip eflags cs ss ds es fs gs'
